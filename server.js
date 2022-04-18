@@ -3,9 +3,9 @@ const { fstat } = require("fs");
 //const { join } = require('path')
 const path = require("path");
 const app = express();
-// const PORT = 3000;
+const PORT = 3000;
 const server = app.listen(process.env.PORT || 3000, function () {
-  //   console.log("oh", PORT);
+    console.log("server running on ", PORT);
 });
 
 const fs = require("fs");

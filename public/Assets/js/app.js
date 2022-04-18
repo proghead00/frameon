@@ -1,11 +1,22 @@
 var AppProcess = (function () {
+// const model = bodySegmentation.SupportedModels.MediaPipeSelfieSegmentation; // or 'BodyPix'
+
+//   const segmenterConfig = {
+//   runtime: 'mediapipe', // or 'tfjs'
+//   modelType: 'landscape' // or 'landscape'
+//   };
+
+//   segmenter = await bodySegmentation.createSegmenter(model, segmenterConfig);
+
   var peers_connection_ids = [];
   var peers_connection = [];
   var remote_vid_stream = [];
   var remote_aud_stream = [];
   let local_div;
+  let canvas;
   var audio;
   var icecandidate;
+  var net;
   var isAudioMute = true;
   var rtp_aud_senders = [];
   var video_states = {
@@ -22,6 +33,14 @@ var AppProcess = (function () {
     my_connection_id = my_connid;
     eventProcess();
     local_div = document.getElementById("LocalVideoPlayer");
+    canvas = document.getElementById("canvas")
+    canvasCtx = canvas.getContext("2d")
+    net = await bodyPix.load()
+
+    // const outputStride = 16;
+    // const segmentationThreshold = 0.5;
+
+
   }
   function eventProcess() {
     $("#miceMuteUnmute").on("click", async function () {
@@ -46,8 +65,10 @@ var AppProcess = (function () {
     });
     $("#videoCamOnOff").on("click", async function () {
       if (video_st == video_states.Camera) {
+        console.log(video_st)
         await videoProcess(video_states.None);
       } else {
+        console.log(video_st)
         await videoProcess(video_states.Camera);
       }
     });
@@ -111,8 +132,31 @@ var AppProcess = (function () {
       removeMediaSenders(rtp_vid_senders);
     }
   }
+
+
+  function onResults(results) {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.drawImage(results.segmentationMask, 0, 0,
+                        canvas.width, canvas.height);
+  
+    // Only overwrite existing pixels.
+    canvasCtx.globalCompositeOperation = 'source-out';
+    canvasCtx.fillStyle = '#000000';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+  
+    // Only overwrite missing pixels.
+    canvasCtx.globalCompositeOperation = 'destination-atop';
+    canvasCtx.drawImage(
+        results.image, 0, 0, canvas.width, canvas.height);
+  
+    canvasCtx.restore();
+  }
+
+
   async function videoProcess(newVideoState) {
     if (newVideoState == video_states.None) {
+      // console.log(newVideoState)
       $("#videoCamOnOff").html(
         "<span class='material-icons' >videocam_off</span>"
       );
@@ -138,6 +182,71 @@ var AppProcess = (function () {
           },
           audio: false,
         });
+
+        if (vstream && vstream.getVideoTracks().length > 0) {
+          videoCamTrack = vstream.getVideoTracks()[0];
+          console.log(videoCamTrack)
+          
+          if (videoCamTrack) {
+            console.log(local_div);
+            local_div.srcObject = new MediaStream([videoCamTrack]);
+            // const canvasCtx = canvas.getContext("2d")
+            const selfieSegmentation = new SelfieSegmentation({locateFile: (file) => {
+              return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+            }});
+            selfieSegmentation.setOptions({
+              modelSelection: 1,
+            });
+            selfieSegmentation.onResults(onResults);
+            
+            const camera = new Camera(local_div, {
+              onFrame: async () => {
+                await selfieSegmentation.send({image: local_div});
+              },
+              width: 1920,
+              height: 1080
+            });
+  
+            camera.start()
+            // setInterval(async () => {
+            //   net = await bodyPix.load({
+            //     architecture: 'MobileNetV1',
+            //     outputStride: 16,
+            //     multiplier: 0.75,
+            //     quantBytes: 2
+            //   });
+            //   const segmentation = await net.segmentPerson(local_div, {
+            //     flipHorizontal: false,
+            //     internalResolution: 'medium',
+            //     segmentationThreshold: 0.5
+            //   });
+    
+            //   const foregroundColor = { r: 0, g: 0, b: 0, a: 255 };
+            //   const backgroundColor = { r: 0, g: 0, b: 0, a: 0 };
+            //   const backgroundDarkeningMask = bodyPix.toMask(segmentation, foregroundColor, backgroundColor, false); 
+            //   // const coloredPartImage = bodyPix.toMask(segmentation);
+            //   compositeFrame(backgroundDarkeningMask);  
+            // }, 10)
+            // // const opacity = 0.7;
+            // // const flipHorizontal = false;
+            // // const maskBlurAmount = 0; 
+            // // bodyPix.drawMask(
+            // //   canvas, local_div, backgroundDarkeningMask, opacity, maskBlurAmount,
+            // // flipHorizontal);    
+            
+            console.log(local_div);
+            console.log(segmentation)
+            updateMediaSenders(videoCamTrack, rtp_vid_senders);
+          }
+        }
+
+        // local_div.srcObject = vstream
+        // const net = await bodyPix.load()
+        // console.log(vstream)
+        // const personSegmentation = await net.segmentPerson(vstream.video);
+
+        // console.log(personSegmentation)
+
       } else if (newVideoState == video_states.ScreenShare) {
         vstream = await navigator.mediaDevices.getDisplayMedia({
           video: {
@@ -153,21 +262,15 @@ var AppProcess = (function () {
           );
         };
       }
-      if (vstream && vstream.getVideoTracks().length > 0) {
-        videoCamTrack = vstream.getVideoTracks()[0];
-        if (videoCamTrack) {
-          console.log(local_div);
-          local_div.srcObject = new MediaStream([videoCamTrack]);
-          console.log(local_div);
-          updateMediaSenders(videoCamTrack, rtp_vid_senders);
-        }
-      }
+      
     } catch (e) {
       console.log(e);
       return;
     }
     video_st = newVideoState;
     if (newVideoState == video_states.Camera) {
+      new Camera(local_div).stop()
+      console.log("off")
       $("#videoCamOnOff").html('<span class="material-icons">videocam</span>');
       $("#ScreenShareOnOf").html(
         '<span class="material-icons">present_to_all</span><div>Screen share</div>'
@@ -196,6 +299,7 @@ var AppProcess = (function () {
       //   },
     ],
   };
+  
   async function setConnection(connid) {
     var connection = new RTCPeerConnection(iceConfiguration);
 

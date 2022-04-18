@@ -12,6 +12,13 @@
       <script src="/socket.io/socket.io.js"></script>
       <script src="public/Assets/js/jquery-3.4.1.min.js"></script>
       <script src="public/Assets/js/app.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+      <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+      <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+      <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+<!-- Load TensorFlow.js <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script> -->
+
       <script>
          $(function() {
              const urlParams = new URLSearchParams(window.location.search)
@@ -39,7 +46,8 @@
                         <div id="me" class="userbox display-center flex-column">
                            <h2 class="display-center" style="font-size: 14px;"></h2>
                            <div class="display-center">
-                              <video autoplay muted id="LocalVideoPlayer"></video>
+                              <video width="640" height="480" autoplay muted id="LocalVideoPlayer"></video>
+                              <canvas id="canvas" width="640" height="480"></canvas>
                            </div>
                         </div>
                         <div id="otherTemplate" class="userbox display-center flex-column" style="display:none">

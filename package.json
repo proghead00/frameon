@@ -4,12 +4,14 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "dev": "nodemon server.js",
     "start": "node server"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@mediapipe/selfie_segmentation": "^0.1.1632777926",
     "express": "^4.17.1",
     "express-fileupload": "^1.2.1",
     "socket.io": "^4.3.1"
